@@ -1,8 +1,8 @@
 #!/bin/bash
 # NO PRODUCTION SAFE WARRANTY!!
 # For EC2 using single security group on eth0. You can modify it to work in more complex case.
-# Clone https://github.com/sebsto/tsunami-udp.git under ~/git directory.
-# Comment out ./distribute.sh in bootstrap.sh first.
+# You must manually clone https://github.com/sebsto/tsunami-udp.git under ~/git directory.
+# And then, comment out ./distribute.sh in bootstrap.sh.
 
 BSSGID=<sg-id-your-ec2-currently-using>
 TMSGID=<sg-id-allowing-tsunami-traffic>
