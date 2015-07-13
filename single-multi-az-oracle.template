@@ -1,0 +1,176 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Create two Oracle RDS(Single AZ, Multi AZ)",
+    "Parameters": {
+        "DBUsername": {
+            "Default": "master",
+            "Description": "Choose a database admin account username",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "16",
+            "AllowedPattern": "[a-zA-Z][a-zA-Z0-9]*",
+            "ConstraintDescription": "must begin with a letter and contain only alphanumeric characters."
+        },
+        "DBPassword": {
+            "NoEcho": "true",
+            "Default": "<Password for RDS DBA>",
+            "Description": "Choose a database admin account password",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41"
+        },
+		"RDSSubnetGroupName":{
+			"Type": "String",
+			"Description": "SubnetGroup determintes VPC and AZs",
+			"Default": "<Provide your DB subnet group name here>"
+		},
+		"RDSSgId":{
+			"Type": "String",
+			"Description": "The SG RDS ID be a member of.",
+			"Default": "<The security group RDS will join>"
+		},
+		"VpcId":{
+			"Type": "String",
+			"Description": "For SG creation",
+			"Default": "<VPC ID>"
+		}
+    },
+    "Resources": {
+        "InstanceSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+				"VpcId": {"Ref": "VpcId"},
+                "GroupDescription": "Enable SSH access via port 22",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+        "RDSSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+				"VpcId": {"Ref": "VpcId"},
+                "GroupDescription": "Oracle access",
+                "SecurityGroupIngress": {
+					"IpProtocol": "tcp",
+                    "FromPort": "1521",
+                    "ToPort": "1521",
+                    "SourceSecurityGroupId": {
+                        "Fn::GetAtt": ["InstanceSecurityGroup", "GroupId"]
+                    }
+                }
+            }
+        },
+        "orcl11g": {
+            "Type": "AWS::RDS::DBInstance",
+            "DependsOn": "RDSSecurityGroup",
+            "Properties": {
+				"DBSubnetGroupName": {"Ref": "RDSSubnetGroupName"},
+                "DBName": "orcl11g",
+                "AllocatedStorage": "10",
+                "DBInstanceClass": "db.m3.medium",
+                "BackupRetentionPeriod": "0",
+                "Engine": "oracle-ee",
+                "EngineVersion": "11.2.0.4.v3",
+                "MasterUsername": {
+                    "Ref": "DBUsername"
+                },
+                "MasterUserPassword": {
+                    "Ref": "DBPassword"
+                },
+                "VPCSecurityGroups": [
+                    {
+                        "Fn::GetAtt": ["RDSSecurityGroup","GroupId"]
+                    },
+					{"Ref": "RDSSgId"}
+                ],
+				"MultiAZ": "false"
+            }
+        },
+		"orcl11g2": {
+            "Type": "AWS::RDS::DBInstance",
+            "DependsOn": "RDSSecurityGroup",
+            "Properties": {
+				"DBSubnetGroupName": {"Ref": "RDSSubnetGroupName"},
+                "DBName": "orcl11g2",
+                "AllocatedStorage": "10",
+                "DBInstanceClass": "db.m3.medium",
+                "BackupRetentionPeriod": "0",
+                "Engine": "oracle-ee",
+                "EngineVersion": "11.2.0.4.v3",
+                "MasterUsername": {
+                    "Ref": "DBUsername"
+                },
+                "MasterUserPassword": {
+                    "Ref": "DBPassword"
+                },
+                "VPCSecurityGroups": [
+                    {
+                        "Fn::GetAtt": ["RDSSecurityGroup","GroupId"]
+                    },
+					{"Ref": "RDSSgId"}
+                ],
+				"MultiAZ": "true"
+            }
+        }
+    },
+    "Outputs": {
+        "JDBCConnectionString": {
+            "Description": "JDBC connection string for database",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "jdbc:oracle:thin:@//",
+                        {
+                            "Fn::GetAtt": [
+                                "orcl11g",
+                                "Endpoint.Address"
+                            ]
+                        },
+                        ":",
+                        {
+                            "Fn::GetAtt": [
+                                "orcl11g",
+                                "Endpoint.Port"
+                            ]
+                        },
+                        "/",
+                        "logginglab"
+                    ]
+                ]
+            }
+        },
+		"JDBCConnectionString2": {
+            "Description": "JDBC connection string for database",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "jdbc:oracle:thin:@//",
+                        {
+                            "Fn::GetAtt": [
+                                "orcl11g2",
+                                "Endpoint.Address"
+                            ]
+                        },
+                        ":",
+                        {
+                            "Fn::GetAtt": [
+                                "orcl11g2",
+                                "Endpoint.Port"
+                            ]
+                        },
+                        "/",
+                        "orcl11g2"
+                    ]
+                ]
+            }
+        }
+    }
+}
